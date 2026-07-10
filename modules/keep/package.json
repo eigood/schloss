@@ -1,0 +1,15 @@
+{
+  "name": "@schloss/keep",
+  "version": "0.0.0",
+  "description": "Passive storage and basic path map orchestration for Schloss.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@schloss/core": "^0.0.0"
+  }
+}
+

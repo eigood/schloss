@@ -1,0 +1,31 @@
+{
+  "name": "@schloss/keep-r2",
+  "version": "0.0.0",
+  "description": "Cloudflare R2 storage adapter plugin for the Schloss file security ecosystem.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/prepare-release.mjs",
+    "postpublish": "rm -f README.md"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@schloss/core": "^0.0.0",
+    "@aws-sdk/client-s3": "^3.0.0"
+  },
+  "keywords": [
+    "schloss",
+    "plugin",
+    "cloudflare-r2",
+    "s3-compatible",
+    "static-storage"
+  ]
+}
+

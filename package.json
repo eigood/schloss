@@ -1,0 +1,39 @@
+{
+  "name": "schloss",
+  "version": "0.0.0",
+  "description": "Multi-tier file security and client-side encryption for static web hosting.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "modules/*",
+    "plugins/*"
+  ],
+  "exports": {
+    "./core": "./modules/core",
+    "./core/*": "./modules/core/*",
+
+    "./kern": "./modules/kern",
+    "./kern/*": "./modules/kern/*",
+    
+    "./keep": "./modules/keep",
+    "./keep/*": "./modules/keep/*",
+
+    "./gate": "./modules/gate",
+    "./gate/*": "./modules/gate/*",
+
+    "./plugins/keep-r2": "./modules/plugins/keep-r2",
+    "./plugins/keep-r2/*": "./modules/plugins/keep-r2/*"
+  },
+  "keywords": [
+    "schloss",
+    "static-hosting",
+    "file-security",
+    "jwt-auth",
+    "key-escrow",
+    "webcrypto",
+    "typescript",
+    "cloudflare-r2"
+  ],
+  "author": "Adam Heath"
+}
+

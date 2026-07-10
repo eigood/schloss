@@ -1,0 +1,13 @@
+{
+  "name": "@schloss/core",
+  "version": "0.0.0",
+  "description": "Foundational cryptographic primitives and schemas for Schloss.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas.ts",
+    "./ciphers": "./src/ciphers.ts"
+  }
+}
+
