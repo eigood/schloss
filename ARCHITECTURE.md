@@ -1,6 +1,4 @@
-===============================================================================
-🏛️ ARCHITECTURAL SYSTEM BLUEPRINT: SCHLOSS SECURE STATIC ASSET NETWORK
-===============================================================================
+# 🏛️ ARCHITECTURAL SYSTEM BLUEPRINT: SCHLOSS SECURE STATIC ASSET NETWORK
 
 This plan outlines the architecture for @schloss, a high-performance Data Access
 Layer (DAL) authored as a modern, framework-agnostic NPM/Node package (ESM
@@ -12,14 +10,15 @@ By leveraging serverless relational computing alongside static public delivery,
 the architecture scales to thousands of consumers while protecting account
 quotas, preventing data loss, and keeping runtime code performant on older
 mobile devices.
-===============================================================================
 
-===============================================================================
-🗂️ 1. MONOREPO WORKSPACE LAYOUT & INFRASTRUCTURE BOUNDARIES
-===============================================================================
+---
+
+## 🗂️ 1. MONOREPO WORKSPACE LAYOUT & INFRASTRUCTURE BOUNDARIES
+
 The software is organized as an isomorphic multi-package monorepo workspace
 with strict separation of compile-time and runtime dependencies.
 
+```text
 schloss/
 ├── modules/                   # Core Foundational Packages (m + Tab)
 │   ├── core/                  # Downstream data contracts (Agnostic)
@@ -61,11 +60,11 @@ schloss/
 ├── .npmignore                 # Prevents the /plugins folder from leaking to npm
 ├── package.json               # Monorepo root manifest and wildcard export router
 └── README.md                  # Primary developer onboarding landing page
-===============================================================================
+```
+---
 
-===============================================================================
-🛡️ 2. BACKEND OPERATIONAL ZONE (SECURE SANDBOX)
-===============================================================================
+## 🛡️ 2. BACKEND OPERATIONAL ZONE (SECURE SANDBOX)
+
 * Firebase Auth Blocking Function: Triggers automatically upon account creation
   to intercept the signup process, securely log the initial registration claim,
   and seed the baseline user row in the database before token issuance.
@@ -79,11 +78,11 @@ schloss/
   unencrypted foundational data sources. Because consumers only view generated
   data, public assets are disposable and can be recompiled from this source
   cache at any time, engineering out data loss.
-===============================================================================
 
-===============================================================================
-🌐 3. PUBLIC DISTRIBUTION ZONE (STATIC SITE DELIVERY)
-===============================================================================
+---
+
+## 🌐 3. PUBLIC DISTRIBUTION ZONE (STATIC SITE DELIVERY)
+
 * Public R2 Bucket: A read-only static web server exposed via a custom domain.
   Browsers fetch all metadata files and data assets directly via public URLs.
 * Permanent User Profile Folder (/keys/users/{GUID}.json): Created once during
@@ -95,11 +94,11 @@ schloss/
 * Protected Files Folder (/protected-files/): Contains the encrypted data
   payloads. Files are either named deterministically by user GUID (for unique,
   user-specific views) or by content-hash fingerprints.
-===============================================================================
 
-===============================================================================
-🗺️ 4. THE CRYPTOGRAPHIC DISTRIBUTION MODEL
-===============================================================================
+---
+
+## 🗺️ 4. THE CRYPTOGRAPHIC DISTRIBUTION MODEL
+
 To enforce zero-knowledge access on a static server without server-side compute
 checks, the system implements Envelope Encryption combined with an inverted,
 sliced architecture.
@@ -116,12 +115,12 @@ sliced architecture.
   separately for each authorized member using their individual Public Keys.
   These encrypted variations are stored inside the collective Hash Ring Stripe
   Files rather than inside individual user profile files.
-===============================================================================
 
-===============================================================================
-⏱️ 5. USER LIFECYCLE WORKFLOWS
-===============================================================================
-A. Initial Entry & Cryptographic Onboarding:
+---
+
+## ⏱️ 5. USER LIFECYCLE WORKFLOWS
+
+### A. Initial Entry & Cryptographic Onboarding:
 1. A new user is created in the D1 relational database via an external
    Firebase Identity Hook. At this stage, they are authenticated but lack
    cryptographic keys.
@@ -138,7 +137,7 @@ A. Initial Entry & Cryptographic Onboarding:
    R2, calculates the user's target coordinate on the Hash Ring, and registers
    an empty container block for them inside that specific slice file.
 
-B. Group Addition:
+### B. Group Addition:
 1. The administrative layer logs the group linkage into the D1 relational
    database table.
 2. The backend reads the target user's public key and the group's current
@@ -147,7 +146,7 @@ B. Group Addition:
    the result into the user's pre-allocated block inside their designated
    Hash Ring stripe file on R2 (1 server write).
 
-C. User Removal / Group Key Rotation:
+### C. User Removal / Group Key Rotation:
 1. The administrative layer deletes the membership record from the D1 database.
 2. The backend generates a brand-new group master key and increments the
    group's active version integer in D1 and the global config.json static
@@ -157,11 +156,11 @@ C. User Removal / Group Key Rotation:
 4. The backend concurrently rewrites only the active stripe files to distribute
    the new key version. The removed user is left out of the loops, terminating
    their future access (Strictly bounded server writes).
-===============================================================================
 
-===============================================================================
-💾 6. FILE INGESTION & PROTECTION PATHS
-===============================================================================
+---
+
+## 💾 6. FILE INGESTION & PROTECTION PATHS
+
 When an asset is uploaded or generated by the system, the administration layer
 checks an explicit classification parameter to determine encryption and
 directory paths:
@@ -179,12 +178,12 @@ directory paths:
   key, attaches the sealed key header to the encrypted asset bytes, and
   writes the file into a version-controlled directory path
   (/protected-files/groups/{Group_ID}_v{Version}/).
-===============================================================================
 
-===============================================================================
-🏎️ 7. MOBILE & CACHE OPTIMIZATION PLAN
-===============================================================================
-A. Write-Quota Preservation (Backend):
+---
+
+## 🏎️ 7. MOBILE & CACHE OPTIMIZATION PLAN
+
+### A. Write-Quota Preservation (Backend):
 The BaseStorageProvider class inside @schloss/keep-r2 features an unopinionated
 pass-through contract. When the administrative layer puts a file into R2, it
 passes native platform options arrays directly to the Cloudflare environment.
@@ -192,7 +191,7 @@ This allows the backend to natively inject strong ETags, content-hashes, and
 explicit httpMetadata properties during file creation, safely managing your 1
 Million writes/month account limit.
 
-B. Network & CPU Efficiency (Older Mobile Devices):
+### B. Network & CPU Efficiency (Older Mobile Devices):
 * Hardware Acceleration: The client library uses frameworkless vanilla
   JavaScript and the native browser window.crypto.subtle layer. Cryptographic
   math runs via compiled browser C++ code rather than raw JavaScript strings,
@@ -212,5 +211,6 @@ B. Network & CPU Efficiency (Older Mobile Devices):
   multi-megabyte system-wide files. They download a single, highly compressed
   JSON slice file (~70KB), extracting only the precise operational keys they
   require.
-===============================================================================
+
+---
 
