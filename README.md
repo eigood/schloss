@@ -36,4 +36,13 @@ To install all dependencies and establish local workspace cross-linking for ever
 ```bash
 npm install
 ```
+## Why "Schloss"?
+
+In German, the word **Schloss** uniquely carries a dual meaning: it translates to both **"lock"** and **"castle."** 
+
+This perfect linguistic intersection reflects the split architecture of the ecosystem:
+*   **The Lock (Frontend):** Represents the heavy, client-side cryptography. The frontend browser runtime functions as a precise mechanical lock, using local private keys and native WebCrypto APIs to secure and decipher data in absolute isolation.
+*   **The Castle (Backend):** Represents the administrative seat of power. The backend system functions as a protected fortress where roles, user permissions, and master key escrow matrices are structured and managed.
+
+By bridging the heavy security of a "lock" with the structured multi-tier governance of a "castle," the name **Schloss** perfectly embodies a library designed to distribute cryptographically sealed assets across cheap, infinite-scale static environments.
 
