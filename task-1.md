@@ -1,8 +1,8 @@
 # Task 1: The Cloudflare D1 Relational Schema
 
-*   ▲ **Context Framework:** @schloss (Isomorphic Secure Static Asset Network Monorepo)
-*   ▲ **Target Environment:** Cloudflare D1 (SQL-based Serverless Relational Database)
-*   ▲ **Dependencies:** None (This forms the relational schema foundation)
+*   **Context Framework:** @schloss (Isomorphic Secure Static Asset Network Monorepo)
+*   **Target Environment:** Cloudflare D1 (SQL-based Serverless Relational Database)
+*   **Dependencies:** None (This forms the relational schema foundation)
 
 ## Background Constraints
 *   Monorepo Mapping: Serves as the relational counterpart to the @schloss/core contracts.
