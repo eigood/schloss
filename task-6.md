@@ -1,27 +1,24 @@
 ===============================================================================
-📋 TASK 6: WEB CRYPTO API & DECRYPTION PIPELINE
+📋 TASK 6: SERVER SECURITY ORCHESTRATION KERNEL
 ===============================================================================
-Context Framework: Isomorphic Secure Static Asset Network
-Target Environment: Browser Thread Middleware (Frameworkless Vanilla JavaScript)
+Context Framework: @schloss (Isomorphic Secure Static Asset Network Monorepo)
+Target Environment: @schloss/kern (src/escrow.ts & src/sign.ts)
+Dependencies: Task 1, Task 2, Task 3, Task 4, Task 5
 
 [BACKGROUND CONSTRAINTS]
-- Hardware Limits: Must execute rapidly on older mobile devices without causing thread latency or memory choking.
-- Cryptographic Engine: Relies completely on native, compiled browser `window.crypto.subtle` operations (future-slated for ECC/AES).
+- Engine Sandbox: Astro 6 / Next.js edge application worker endpoints running on Cloudflare.
+- Security Constraint: Backend must remain fully "blind" to the user's unencrypted private profile credentials.
 
 [PLAN SEGMENT FROM MASTER BLUEPRINT]
-* Individual/Group Data Protection: Assets are enveloped using unique symmetric 
-  file DEKs. The DEK is sealed either by an individual user public key or a 
-  group master key, and appended as a raw data header onto the file bytes.
-* Hardware Acceleration: The client library uses frameworkless vanilla 
-  JavaScript and the native browser window.crypto.subtle layer. Cryptographic 
-  math runs via compiled browser C++ code rather than raw JavaScript strings, 
-  preventing older mobile chips from bottlenecking.
-* Caching Engine: Relies on native browser and CDN mechanics. Immutable content-
-  hashed assets are pinned with permanent cache headers, loading from local disk.
+* Lifecycle Operations Engine (Section 3): Admin backend processes the client onboarding
+  escrow payload to commit key files and update hash ring slices. Handles group addition
+  by updating a single user slot (1 write). Orchestrates group removal by deleting database
+  associations, regenerating group master keys, incrementing configuration version integers,
+  and batch-writing updated keys concurrently to only the active slice structures.
 
 [TODAY'S OBJECTIVE]
-Design the architectural processing pipeline for client-side data decryption. Plan out how the vanilla JS library reads raw HTTP response stream buffers, extracts the sealed metadata file header to locate the encrypted DEK, uses local in-memory keys (unsealed via the user's private key) to crack the envelope, and streams the decrypted plaintext bytes back to the document frame for rendering.
+Design the master administrative backend controller loop logic inside `@schloss/kern`. The system must coordinate transactional database modifications inside Cloudflare D1 with public static asset deployments to R2. It must enforce zero-knowledge escrow compilation, handle single-user group additions, and execute group key rotations that scale by rewriting only the necessary hash ring slice chunks concurrently.
 
-Please outline the header packet schema, parsing rules for byte offsets, streaming data management, and memory safety rules for mobile devices. Do not write any code yet.
+Please outline the server transaction sequences, D1 batch architectures, parallel slice-writing mechanics, and atomic recovery scripts. Do not write any code yet.
 ===============================================================================
 

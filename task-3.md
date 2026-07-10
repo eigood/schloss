@@ -1,25 +1,24 @@
 ===============================================================================
-📋 TASK 3: THE CLOUDFLARE D1 RELATIONAL SCHEMA
+📋 TASK 3: THE HASH RING SCHEMA & PATH ROUTING MATRIX
 ===============================================================================
-Context Framework: Isomorphic Secure Static Asset Network
-Target Environment: Cloudflare D1 (SQL-based Serverless Relational Database)
+Context Framework: @schloss (Isomorphic Secure Static Asset Network Monorepo)
+Target Environment: @schloss/keep (src/paths.ts) & @schloss/core (src/schemas.ts)
+Dependencies: Task 1, Task 2
 
 [BACKGROUND CONSTRAINTS]
-- Architecture Role: Functions as the single source of structural relationship truth. Static files never hold relational metadata.
-- Processing Target: Astro 6 / Next.js serverless backends query this database to figure out key mapping routes instantly, preventing expensive static file scanning overhead.
+- Scale Boundary: Caps user bandwidth footprint under ~70KB per metadata check by segmenting 1,500 profiles into 10 to 30 slice files.
+- Hashing Rules: Implements deterministic path resolution over a 3-tier isolation boundary.
 
 [PLAN SEGMENT FROM MASTER BLUEPRINT]
-* Cloudflare D1 Database: The transactional source of truth for metadata. It 
-  tracks user GUIDs, group memberships, user public keys, and unencrypted Group 
-  Master Keys.
-* User Lifecycle Interactions: Serves relational actions throughout the engine's 
-  lifespan, including Firebase identity hooks, logging group memberships, 
-  tracking cryptographic active version integers, and querying remaining 
-  authorized group members during revocations.
+* Stripe Folder (/keys/slices/slice_X.json): Segmented data buckets that group
+  user allocations onto a Consistent Hashing Ring.
+* Group Key Distribution: Active Group Master Keys are duplicated and encrypted
+  separately for each authorized member using their individual Public Keys
+  inside the shared Stripe Files.
 
 [TODAY'S OBJECTIVE]
-Design the SQL table layout, key indexing, and indexing strategies for the Cloudflare D1 metadata core. The schema must cleanly organize records for Users (tracking GUID profiles and public key structures), Groups (tracking group IDs, active cryptographic version integers, and secure master key storage), and Memberships (tracking relational associations between user GUIDs and groups).
+Design the mathematical routing structure and JSON document architecture for the hash ring stripes. You must establish the schema matrix in `@schloss/core` for `config.json` and `slice_X.json`. You must also define the routing algorithms inside `@schloss/keep` that resolve a user's GUID to a fixed slice coordinates on the ring using a sorted array of virtual nodes, alongside structuring the member key maps.
 
-Please map out the table schemas, data type alignments, data-integrity foreign keys, and query performance profiles needed to support rapid admin lookups. Do not write any code yet.
+Please plan the ring modulo logic, token distribution math, JSON tree interfaces, and node bucket splitting processes. Do not write any code yet.
 ===============================================================================
 

@@ -1,25 +1,25 @@
 ===============================================================================
-📋 TASK 7: ADMIN CORE ORCHESTRATION ENGINE
+📋 TASK 7: ASSET INGESTION & ENVELOPE SEEDING PIPELINE
 ===============================================================================
-Context Framework: Isomorphic Secure Static Asset Network
-Target Environment: Serverless Edge Controller Module (Astro 6 / Next.js V8 Worker)
+Context Framework: @schloss (Isomorphic Secure Static Asset Network Monorepo)
+Target Environment: @schloss/kern (File Ingestion Layer) & @schloss/keep
+Dependencies: Task 1, Task 2, Task 6
 
 [BACKGROUND CONSTRAINTS]
-- Scale Boundary: Must ensure multi-user group mutations and key rotations stay safely bounded inside your 1M writes/month host limit.
-- Operational Role: Acts as the transactional "glue" linking relational database modifications with static R2 file rewriting operations.
+- Sovereignty: The user acts strictly as a consumer; generated protected files are tailored, custom data outputs.
+- Redundancy Engine: The private R2 bucket functions as an absolute master cache, permitting total public file recovery.
 
 [PLAN SEGMENT FROM MASTER BLUEPRINT]
-* User Lifecycle Section 3 (Workflows A, B, and C): Governs the core execution loops 
-  for adding a user's initial cryptographic identity container to a ring slice, 
-  handling group addition by patching single slice file locations (1 write), 
-  and executing user group removals. Removal triggers master key regeneration, 
-  incrementing global configuration tracking metrics, and concurrently 
-  rewriting *only* the specific active stripe files to distribute new keys while 
-  cleanly excluding the revoked user.
+* Private R2 Bucket: Secure, internet-isolated archive storing raw, unencrypted
+  foundational data sources to permit recovery.
+* Ingestion Paths (Section 4): Directs payloads by classification type: Public
+  Routing sends data raw to public directories. Individual Routing wraps data
+  in a unique file DEK sealed via a user public key. Group Routing seals file
+  DEKs via the current Group Master Key inside version-controlled folders.
 
 [TODAY'S OBJECTIVE]
-Design the server-side business logic engine that orchestrates user additions, group provisioning, group attachments, and user group removals. The design must ensure that database updates and static storage writes execute with complete structural synchronization. It must also ensure that group key rotations scale horizontally by updating only the necessary stripe files concurrently.
+Design the asset onboarding and encryption streaming pipeline inside `@schloss/kern`. The engine must receive data streams, save the unencrypted source assets securely to the internet-isolated private R2 bucket, evaluate security routing types, fetch the necessary keys from D1, wrap files in unique symmetric DEKs, build the metadata header wrapper packets, and commit the public asset to R2 with native cache instructions.
 
-Please outline the procedural execution flow, batch processing plans for database updates, parallelization strategies for R2 writes, and data fallback safety loops. Do not write any code yet.
+Please outline the data streaming architecture, envelope crypto operations, path generation parameters, and metadata pass-through mapping. Do not write any code yet.
 ===============================================================================
 

@@ -1,27 +1,21 @@
 ===============================================================================
-📋 TASK 8: FILE INGESTION & PROTECTION PIPELINE
+📋 TASK 8: WEB CRYPTO RUNTIME DECRYPTION ENGINE (THE FINAL OUTPUT)
 ===============================================================================
-Context Framework: Isomorphic Secure Static Asset Network
-Target Environment: Backend File Engine (Astro 6 / Next.js Serverless Sandbox)
+Context Framework: @schloss (Isomorphic Secure Static Asset Network Monorepo)
+Target Environment: @schloss/gate (src/decrypt.ts) & @schloss/core (src/ciphers.ts)
+Dependencies: Task 2, Task 3, Task 5, Task 6, Task 7
 
 [BACKGROUND CONSTRAINTS]
-- Data Direction: Users function exclusively as consumers; any uploaded material becomes system property. Individual files are uniquely generated custom data views.
-- Durability Model: Real data truth lives in D1/Private R2; files in public R2 are disposable and easily reproducible.
+- Optimization Target: Tailored to prevent thread blockages or memory leaks on low-powered, legacy mobile browsers.
+- Processing Foundation: Leverages native browser C++ compiled implementations via `window.crypto.subtle`.
 
 [PLAN SEGMENT FROM MASTER BLUEPRINT]
-* Private R2 Bucket: A secure, internet-isolated archive storing raw, 
-  unencrypted foundational data sources. If a consumer loses their keys, 
-  disposable public assets can be recompiled from this database cache.
-* File Ingestion Paths (Section 4): Evaluates incoming data payloads against an 
-  explicit classification type: Public Routing bypasses crypto for raw public 
-  folder landing. Individual Routing locks data with a symmetric file DEK 
-  sealed via the user's public key (mapped to their GUID path). Group Routing 
-  seals the file DEK via the active Group Master key and targets a version-controlled 
-  directory structure.
+* Hardware Acceleration: Client library uses frameworkless vanilla JS and the native browser window.crypto.subtle layer. Cryptographic math runs via compiled browser C++ code rather than raw JavaScript strings, preventing older mobile chips from bottlenecking.
+* Static Asset Retrieval: Pulls envelope encrypted data structures directly from public R2 over standard HTTP URLs, utilizing browser caching networks natively.
 
 [TODAY'S OBJECTIVE]
-Design the system's asset onboarding and encryption processing pipeline. Plan how the server engine receives file streams or synthesizes unique view summaries, splits the data flow based on security classifications, writes raw unencrypted states to the secure private R2 cache repository, runs the selected envelope encryption math, and pushes the final encrypted file out to the public static server with precise cache metadata parameters applied.
+Design the client-side streaming decryption engine inside `@schloss/gate/decrypt.ts`. The script must pull the cryptographic specifications defined in `@schloss/core/ciphers.ts`, ingest raw encrypted response buffers over standard HTTP fetch, parse byte offsets to isolate the file metadata header, crack the sealed file DEK using local in-memory keys, and stream the resulting plaintext data chunks smoothly into the DOM.
 
-Please outline the streaming ingestion channels, envelope crypto procedures, versioned file-naming architectures, and direct storage parameter mapping. Do not write any code yet.
+Please outline the browser crypto execution sequences, stream parsing rules, memory footprint boundaries, and fallback render architectures. Do not write any code yet.
 ===============================================================================
 

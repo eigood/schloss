@@ -1,29 +1,24 @@
 ===============================================================================
-📋 TASK 5: ONBOARDING & FIRST-VISIT TRANSITION WORKFLOWS
+📋 TASK 5: CLIENT BOOT & ONBOARDING STATE ENGINE
 ===============================================================================
-Context Framework: Isomorphic Secure Static Asset Network
-Target Environment: Browser Runtime Client (Frameworkless Vanilla HTML5/JS)
+Context Framework: @schloss (Isomorphic Secure Static Asset Network Monorepo)
+Target Environment: @schloss/gate (src/auth.ts)
+Dependencies: Task 1, Task 2, Task 3, Task 4
 
 [BACKGROUND CONSTRAINTS]
-- Device Baseline: Optimized for performance and execution compatibility on older mobile devices.
-- User State: Handles the "Cryptographically Unprovisioned" state where an authenticated user exists in the D1 table but possesses no keys or stripe entries.
+- Client Blueprint: Framework-agnostic vanilla HTML5/JS designed for older mobile hardware.
+- State Gate: Manages the transitional unprovisioned state where a valid JWT claim exists, but no R2 files exist.
 
 [PLAN SEGMENT FROM MASTER BLUEPRINT]
-* Permanent User Profile Folder (/keys/users/{GUID}.json): Created once during 
-  first-visit initialization. Contains the user's publicKey and their 
-  passphrase-encrypted privateKey (Escrow). It is never modified during group 
-  operations.
-* User Lifecycle Step A.2-A.5: Upon first site access, the frontend vanilla 
-  JavaScript client attempts to fetch their identity file from public R2 and 
-  receives an expected HTTP 404. This 404 serves as a deterministic trigger 
-  for the browser to run local client-side key generation (slated for 
-  lightweight ECC). The browser encrypts the generated private key using a user 
-  passphrase and transmits the public/encrypted-private package to a backend 
-  endpoint to write their profile and bind them to the Hash Ring.
+* User Lifecycle Onboarding (A.2-A.5): Frontend vanilla JS client intercepts public
+  R2 profile file fetch misses (HTTP 404). This acts as a trigger to execute
+  local hardware key generation. The client captures a user passphrase, encrypts
+  the private key to build an escrow bundle, and pushes it up to the Astro/Next.js
+  endpoints to create /keys/users/{GUID}.json and register their slice allocation.
 
 [TODAY'S OBJECTIVE]
-Map out the logic gating sequence, error interception parameters, and fallback state transitions for a user's very first visit to the site. The client-side library must cleanly intercept network missing file anomalies, execute local hardware key generation using standard browser features, securely collect passphrase input to derive local storage seals, and send onboarding updates back to the Astro/Next.js edge server without locking the main browser window.
+Design the client boot-sequence interceptor and onboarding manager inside `@schloss/gate/auth.ts`. The script must seamlessly extract GUID custom claims from the web token, navigate 404 missing profiles gracefully, coordinate background asymmetric key generation using standard browser features, collect local passphrase input to derive encryption storage keys, and transmit registration data to the server.
 
-Please outline the precise operational sequence, client state machines, error-catching thresholds, and edge-server update requirements. Do not write any code yet.
+Please outline the vanilla JS initialization sequence, network intercept states, local data validation, and transmission packet packaging. Do not write any code yet.
 ===============================================================================
 

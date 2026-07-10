@@ -1,26 +1,27 @@
 ===============================================================================
-📋 TASK 1: THE CLOUDFLARE D1 RELATIONAL SCHEMA
+📋 TASK 1: THE CLOUDFLARE D1 RELATIONAL SCHEMA (THE FOUNDATION)
 ===============================================================================
-Context Framework: Isomorphic Secure Static Asset Network
+Context Framework: @schloss (Isomorphic Secure Static Asset Network Monorepo)
 Target Environment: Cloudflare D1 (SQL-based Serverless Relational Database)
-Dependencies: None (This is the system foundation)
+Dependencies: None (This forms the relational schema foundation)
 
 [BACKGROUND CONSTRAINTS]
-- Architecture Role: Functions as the single source of structural relationship truth. Static files never hold relational metadata.
-- Processing Target: Astro 6 / Next.js serverless backends query this database to figure out key mapping routes instantly, preventing expensive static file scanning overhead.
+- Monorepo Mapping: Serves as the relational counterpart to the @schloss/core contracts.
+- Processing Target: Astro 6 / Next.js edge routers query this layer to look up keys and mappings instantly without file parsing loops.
 
 [PLAN SEGMENT FROM MASTER BLUEPRINT]
-* Cloudflare D1 Database: The transactional source of truth for metadata. It 
-  tracks user GUIDs, group memberships, user public keys, and unencrypted Group 
+* Cloudflare D1 Database: The transactional source of truth for metadata. It
+  tracks user GUIDs, group memberships, user public keys, and unencrypted Group
   Master Keys.
-* User Lifecycle Interactions: Serves relational actions throughout the engine's 
-  lifespan, including Firebase identity hooks, logging group memberships, 
-  tracking cryptographic active version integers, and querying remaining 
-  authorized group members during revocations.
+* User Lifecycle Workflows: Provides transactional integrity for Firebase identity
+  hooks, membership tracking, and active key version updates.
 
 [TODAY'S OBJECTIVE]
-Design the SQL table layout, key indexing, and indexing strategies for the Cloudflare D1 metadata core. The schema must cleanly organize records for Users (tracking GUID profiles and public key structures), Groups (tracking group IDs, active cryptographic version integers, and secure master key storage), and Memberships (tracking relational associations between user GUIDs and groups).
+Design the SQL table layout, column properties, and relational indexes for the Cloudflare D1 metadata schemas. The relational boundaries must safely organize:
+1. Users Table (GUID identifier profiles, created timestamp, public key string allocations).
+2. Groups Table (Group string identifiers, active key version counters, encrypted master hex keys).
+3. Memberships Table (Relational intersection mapping GUIDs to authorized Group IDs).
 
-Please map out the table schemas, data type alignments, data-integrity foreign keys, and query performance profiles needed to support rapid admin lookups. Do not write any code yet.
+Please outline the database schemas, primary/foreign key pairs, constraints, and index models needed to back backend routing scripts. Do not write any code yet.
 ===============================================================================
 
