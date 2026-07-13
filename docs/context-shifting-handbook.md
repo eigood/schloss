@@ -16,7 +16,20 @@ We have finished planning out the architecture for this task. Please generate a 
 Generate a single-paragraph plain text task summary using inline bullets for my task file. Focus only on file locations, schema fields, dependencies, and scripts. No code blocks, no headers, and no markdown tables—just a dense text block I can instantly copy-paste.
 ```
 
+```text
+Please generate a single, dense Markdown block summarizing our final architectural decisions. It must be wrapped inside a raw markdown code block so I can copy-paste it instantly. Follow this exact layout:
+
+# TASK SUMMARY: [Workspace Scope & Component Context]
+
+- FILE LOCATIONS: [Comma-separated paths and files mapped to roles]
+- [MAIN OBJECT] TABLE/SCHEMA: [Specific names, types, flags, and constraint keys]
+- [SUPPORTING DATA] STRUCTURES: [Types, interfaces, properties, or structural definitions]
+- SYSTEM LOGIC/SIGNATURES: [Core methods, function signatures, abstractions, and behaviors]
+- CODE/DEPS POLICY: [Architectural mandates, error-handling choices, formatting requirements, or dependency boundaries]
+
+Rule: Ensure the output is completely code-free, concise, and structured strictly as a flat list of markdown dash-bullets inside that single code block wrapper.
 Action: Copy the AI's dense response and save it locally in a text file named CONTRACT_TASK_X.txt (where X is the number of the task you just completed).
+```
 
 ---
 
