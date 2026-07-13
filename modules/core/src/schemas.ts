@@ -27,6 +27,18 @@ export const memberships = sqliteTable('memberships', {
   userGroupUniq: unique().on(userId, groupId)
 }))
 
+export const assets = sqliteTable('assets', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  namespace: text('namespace').notNull(),
+  key: text('key').notNull(),
+  hashEtag: text('hash_etag').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  lastModified: integer('last_modified').notNull(),
+  syncedAt: integer('synced_at').notNull(),
+}, (table) => [
+  uniqueIndex('namespace_key_idx').on(table.namespace, table.key)
+]);
+
 export type User = InferSelectModel<typeof users>
 export type NewUser = InferInsertModel<typeof users>
 
@@ -35,4 +47,7 @@ export type NewGroup = InferInsertModel<typeof groups>
 
 export type Membership = InferSelectModel<typeof memberships>
 export type NewMembership = InferInsertModel<typeof memberships>
+
+export type Asset = InferSelectModel<typeof assets>;
+export type NewAsset = InferInsertModel<typeof assets>;
 
