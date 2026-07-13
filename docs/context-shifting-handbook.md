@@ -12,6 +12,10 @@ Right before closing out a completed task session, copy and send the following e
 We have finished planning out the architecture for this task. Please generate a compact, dense, code-free API Contract block summarizing our final structural decisions (such as exact SQL schemas, JSON structures, file paths, TypeScript interfaces, function signatures, and return values). Do not include raw implementation code. I need to save this block to pass into future dependent task planning sessions.
 ```
 
+```text
+Generate a single-paragraph plain text task summary using inline bullets for my task file. Focus only on file locations, schema fields, dependencies, and scripts. No code blocks, no headers, and no markdown tables—just a dense text block I can instantly copy-paste.
+```
+
 Action: Copy the AI's dense response and save it locally in a text file named CONTRACT_TASK_X.txt (where X is the number of the task you just completed).
 
 ---
