@@ -1,0 +1,109 @@
+---
+interface Props {
+  apiBaseUrl: string
+  cdnBaseUrl: string
+}
+
+const { apiBaseUrl, cdnBaseUrl } = Astro.props
+
+if (!apiBaseUrl) {
+  throw new Error('[SchlossAuth] Initialization failed: The "apiBaseUrl" property must be specified.')
+}
+
+if (!cdnBaseUrl) {
+  throw new Error('[SchlossAuth] Initialization failed: The "cdnBaseUrl" property must be specified.')
+}
+---
+
+<schloss-auth-engine data-api={apiBaseUrl} data-cdn={cdnBaseUrl}>
+  <p class="auth-status-text">Status: Initializing security layers...</p>
+
+  {/* Locked / Error State */}
+  <schloss-screen-locked class="auth-screen">
+    <slot name="locked-content">
+      <h2>Secure Sandbox Lockout</h2>
+      <p class="error">System error or invalid credential claims found. Contact your administrator.</p>
+    </slot>
+  </schloss-screen-locked>
+
+  {/* First-time Onboarding */}
+  <schloss-screen-onboard class="auth-screen">
+    <slot name="onboard-header">
+      <h2>Welcome to Schloss</h2>
+      <p>Generate your secure identity keys. Your passphrase encrypts your identity locally.</p>
+    </slot>
+    <form class="action-form">
+      <label>Create Private Passphrase:
+        <input type="password" required class="pass-input" />
+      </label>
+      <button type="submit">Generate Cryptographic Keys</button>
+    </form>
+  </schloss-screen-onboard>
+
+  {/* Returning Unlock */}
+  <schloss-screen-unlock class="auth-screen">
+    <slot name="unlock-header">
+      <h2>Unlock Identity Context</h2>
+      <p>Enter your local passphrase to decrypt your private key in volatile memory.</p>
+    </slot>
+    <div class="auth-error error"></div>
+    <form class="action-form">
+      <input type="password" required class="pass-input" placeholder="Enter local password" />
+      <button type="submit">Unlock Device</button>
+      <button type="button" class="btn-forgot">I Forgot My Passphrase</button>
+    </form>
+  </schloss-screen-unlock>
+
+  {/* Device Linking */}
+  <schloss-screen-link class="auth-screen">
+    <slot name="link-header">
+      <h2>Authorize New Device</h2>
+      <p>We found an existing cryptographic identity profile associated with your token.</p>
+    </slot>
+    <div class="auth-error error"></div>
+    <form class="action-form">
+      <label>Enter Security Passphrase to sync:
+        <input type="password" required class="pass-input" />
+      </label>
+      <button type="submit">Download & Link Device</button>
+    </form>
+  </schloss-screen-link>
+
+  {/* Pending Admin Approval */}
+  <schloss-screen-pending class="auth-screen">
+    <slot name="pending-content">
+      <h2>Reset Request Sent</h2>
+      <p>Your cryptographic identity reset is pending administrative approval.</p>
+    </slot>
+  </schloss-screen-pending>
+
+  {/* Active Authenticated Dashboard */}
+  <schloss-screen-dashboard class="auth-screen">
+    <slot name="dashboard-content">
+      <h2>Identity Active</h2>
+      <p>Private identity keys successfully cached in volatile state memory.</p>
+    </slot>
+    <button class="btn-lock">Lock Application Session</button>
+  </schloss-screen-dashboard>
+</schloss-auth-engine>
+
+<style>
+  .auth-screen {
+    display: none;
+    border: 1px solid #ccc;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+  .auth-screen[active] {
+    display: block;
+  }
+  .error {
+    color: #d9534f;
+    margin: 10px 0;
+    font-weight: bold;
+  }
+</style>
+
+<script src="./SchlossAuthElement.ts"></script>
+

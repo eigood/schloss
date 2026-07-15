@@ -1,0 +1,197 @@
+import { SchlossAuthEngine } from '../auth'
+
+class SchlossAuthEngineElement extends HTMLElement {
+  private engine: SchlossAuthEngine
+  private statusText: HTMLElement | null = null
+  private screens: HTMLElement[] = []
+
+  constructor() {
+    super()
+    const api = this.getAttribute('data-api') || ''
+    const cdn = this.getAttribute('data-cdn') || ''
+    this.engine = new SchlossAuthEngine(api, cdn)
+  }
+
+  connectedCallback() {
+    this.statusText = this.querySelector('.auth-status-text')
+    this.screens = Array.from(this.querySelectorAll('.auth-screen')) as HTMLElement[]
+
+    this.setupOnboard()
+    this.setupUnlock()
+    this.setupLink()
+    this.setupDashboard()
+    this.init()
+  }
+
+  private transitionTo(screenTagName: string) {
+    this.screens.forEach(screen => {
+      if (screen.tagName.toLowerCase() === screenTagName) {
+        screen.setAttribute('active', '')
+      } else {
+        screen.removeAttribute('active')
+      }
+    })
+  }
+
+  private async getFirebaseToken() {
+    return localStorage.getItem('firebase_id_token') || ''
+  }
+
+  private async init() {
+    const token = await this.getFirebaseToken()
+    if (!token) {
+      this.updateStatus('Status: Waiting for Firebase Authentication...')
+      return
+    }
+
+    this.updateStatus('Status: Testing identity keys...')
+    const state = await this.engine.boot(token)
+
+    if (state.status === 'locked') {
+      this.transitionTo('schloss-screen-locked')
+      this.updateStatus('Status: Access Blocked')
+      return
+    }
+
+    if (state.status === 'pending_approval') {
+      this.transitionTo('schloss-screen-pending')
+      this.updateStatus('Status: Awaiting Approval')
+      return
+    }
+
+    const hasLocalKey = !!localStorage.getItem('schloss_local_salt')
+    if (!hasLocalKey && state.status === 'unprovisioned') {
+      const cdnUrl = this.getAttribute('data-cdn')
+      const response = await fetch(`${cdnUrl}/profiles/${state.appGuid}.json`, { method: 'HEAD' })
+      if (response.status === 200) {
+        this.transitionTo('schloss-screen-link')
+        this.updateStatus('Status: Link Device')
+        return
+      }
+    }
+
+    if (state.status === 'unprovisioned') {
+      this.transitionTo('schloss-screen-onboard')
+      this.updateStatus('Status: First-Time Initialization')
+      return
+    }
+
+    if (state.status === 'active') {
+      this.transitionTo('schloss-screen-unlock')
+      this.updateStatus('Status: Identity Locked')
+    }
+  }
+
+  private updateStatus(msg: string) {
+    if (this.statusText) {
+      this.statusText.innerText = msg
+    }
+  }
+
+  private setupOnboard() {
+    const onboardScreen = this.querySelector('schloss-screen-onboard')
+    if (!onboardScreen) return
+
+    const form = onboardScreen.querySelector('.action-form')
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      this.updateStatus('Status: Deriving keys on device...')
+      const pass = (form.querySelector('.pass-input') as HTMLInputElement).value
+      const token = await this.getFirebaseToken()
+      try {
+        await this.engine.onboard(token, pass)
+        this.transitionTo('schloss-screen-dashboard')
+        this.updateStatus('Status: Operational')
+      } catch (err: any) {
+        alert(err.message)
+        this.updateStatus('Status: Initialization Error')
+      }
+    })
+  }
+
+  private setupUnlock() {
+    const unlockScreen = this.querySelector('schloss-screen-unlock')
+    if (!unlockScreen) return
+
+    const form = unlockScreen.querySelector('.action-form')
+    const errorDiv = unlockScreen.querySelector('.auth-error') as HTMLElement
+    const forgotBtn = unlockScreen.querySelector('.btn-forgot')
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const pass = (form.querySelector('.pass-input') as HTMLInputElement).value
+      const success = await this.engine.unlock(pass)
+      if (success) {
+        this.transitionTo('schloss-screen-dashboard')
+        this.updateStatus('Status: Operational')
+      } else if (errorDiv) {
+        errorDiv.innerText = 'Cryptographic auth failed. Bad passphrase.'
+      }
+    })
+
+    forgotBtn?.addEventListener('click', async () => {
+      const confirmReset = confirm('Warning: Resetting your keys destroys local encrypted files until approved by an administrator. Proceed?')
+      if (!confirmReset) return
+
+      const newPass = prompt('Set a brand new master passphrase to request key generation:')
+      if (!newPass) return
+
+      const token = await this.getFirebaseToken()
+      this.updateStatus('Status: Registering identity reset request...')
+      try {
+        await this.engine.requestAdminGatedRekey(token, newPass)
+        this.transitionTo('schloss-screen-pending')
+        this.updateStatus('Status: Awaiting Approval')
+      } catch (err: any) {
+        alert(err.message)
+        this.updateStatus('Status: Error sending rotation request')
+      }
+    })
+  }
+
+  private setupLink() {
+    const linkScreen = this.querySelector('schloss-screen-link')
+    if (!linkScreen) return
+
+    const form = linkScreen.querySelector('.action-form')
+    const errorDiv = linkScreen.querySelector('.auth-error') as HTMLElement
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const pass = (form.querySelector('.pass-input') as HTMLInputElement).value
+      const token = await this.getFirebaseToken()
+      try {
+        await this.engine.linkDevice(token, pass)
+        this.transitionTo('schloss-screen-dashboard')
+        this.updateStatus('Status: Operational')
+      } catch (err: any) {
+        if (errorDiv) {
+          errorDiv.innerText = err.message
+        }
+      }
+    })
+  }
+
+  private setupDashboard() {
+    const dashboardScreen = this.querySelector('schloss-screen-dashboard')
+    if (!dashboardScreen) return
+
+    const lockBtn = dashboardScreen.querySelector('.btn-lock')
+    lockBtn?.addEventListener('click', () => {
+      this.engine.clearSession()
+      const passInput = this.querySelector('schloss-screen-unlock .pass-input') as HTMLInputElement
+      if (passInput) passInput.value = ''
+      this.transitionTo('schloss-screen-unlock')
+      this.updateStatus('Status: Locked')
+    })
+  }
+}
+
+customElements.define('schloss-auth-engine', SchlossAuthEngineElement)
+customElements.define('schloss-screen-locked', class extends HTMLElement {})
+customElements.define('schloss-screen-onboard', class extends HTMLElement {})
+customElements.define('schloss-screen-unlock', class extends HTMLElement {})
+customElements.define('schloss-screen-link', class extends HTMLElement {})
+customElements.define('schloss-screen-pending', class extends HTMLElement {})
+customElements.define('schloss-screen-dashboard', class extends HTMLElement {})
+
