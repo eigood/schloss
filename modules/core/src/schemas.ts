@@ -51,3 +51,52 @@ export type NewMembership = InferInsertModel<typeof memberships>
 export type Asset = InferSelectModel<typeof assets>
 export type NewAsset = InferInsertModel<typeof assets>
 
+export interface HashRingConfig {
+  algorithm: string
+  vnodeFactor: number
+  sliceCount: number
+  ringTokens: number[]
+  ringSliceIndices: number[]
+  slices: {
+    [index: number]: {
+      sliceId: string
+      fileName: string
+      assetCount: number
+      hashEtag: string
+    }
+  }
+}
+
+export interface EncryptedMemberKey {
+  userId: string
+  keyVersion: number
+  ephemeralPublicKey: string
+  encryptedMasterKey: string
+  authenticationTag: string
+}
+
+export interface UserProfilePayload {
+  appGuid: string
+  firebaseGuid: string
+  publicKey: string
+  createdAt: number
+  metadata: {
+    displayName: string | null
+    email: string | null
+  }
+}
+
+export interface SliceStripePayload {
+  sliceId: string
+  generatedAt: number
+  profiles: {
+    [appGuid: string]: UserProfilePayload
+  }
+  groupKeyDistribution: {
+    [groupId: string]: {
+      keyVersion: number
+      members: EncryptedMemberKey[]
+    }
+  }
+}
+

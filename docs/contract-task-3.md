@@ -1,0 +1,8 @@
+# TASK SUMMARY: @schloss/keep & @schloss/core Routing Schema & Path Routing Matrix
+
+- FILE LOCATIONS: Config and slice schemas in `@schloss/core/src/schemas.ts`, path router engine in `@schloss/keep/src/paths.ts`
+- HASH RING SCHEMA: HashRingConfig mapping algorithm (text), vnodeFactor (int), sliceCount (int), ringTokens (int array), ringSliceIndices (int array), and a slices dictionary tracking sliceId, fileName, assetCount, and hashEtag
+- USER PROFILE & KEY STRUCTURES: SliceStripePayload storing sliceId, generatedAt, profiles index mapping appGuid to UserProfilePayload (containing appGuid, firebaseGuid, publicKey, createdAt, metadata), and groupKeyDistribution index mapping groupId to keyVersion and members list (containing userId, keyVersion, ephemeralPublicKey, encryptedMasterKey, authenticationTag)
+- SYSTEM LOGIC/SIGNATURES: murmurHash3(key: string) -> number, HashRingRouter class with constructor(options: HashRingRouterOptions) initializing storagePrefix, maxSliceByteSize, vnodeFactor, and maxProfilesPerSlice, getConfigFileKey() -> string, resolveSliceFileName(appGuid, config) -> string | null, resolveSliceFileKey(appGuid, config) -> string | null
+- CODE/DEPS POLICY: Absolute zero trailing semicolons across files, unfolded continuous lines for signatures and simple logic, strictly empty lines with zero whitespace between function definitions, missing or invalid lookup resolutions consistently return null instead of throwing exceptions, externalized configuration boundaries for scale tuning, and dynamic storage prefix resolution
+
