@@ -48,6 +48,6 @@ export type NewGroup = InferInsertModel<typeof groups>
 export type Membership = InferSelectModel<typeof memberships>
 export type NewMembership = InferInsertModel<typeof memberships>
 
-export type Asset = InferSelectModel<typeof assets>;
-export type NewAsset = InferInsertModel<typeof assets>;
+export type Asset = InferSelectModel<typeof assets>
+export type NewAsset = InferInsertModel<typeof assets>
 
