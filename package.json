@@ -6,7 +6,8 @@
   "license": "Apache-2.0",
   "workspaces": [
     "modules/*",
-    "plugins/*"
+    "plugins/*",
+    "apps/*"
   ],
   "exports": {
     "./core": "./modules/core",
