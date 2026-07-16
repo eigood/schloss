@@ -6,7 +6,7 @@ interface Props {
 
 const { apiBaseUrl, cdnBaseUrl } = Astro.props
 
-if (!apiBaseUrl) {
+if (typeof apiBaseUrl !== 'string') {
   throw new Error('[SchlossAuth] Initialization failed: The "apiBaseUrl" property must be specified.')
 }
 

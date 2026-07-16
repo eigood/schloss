@@ -1,9 +1,9 @@
 // packages/schloss-kern/src/ingest.ts
-import { assets, users, groups } from '@schloss/core/src/schemas'
+import { assets, users, groups } from '@schloss/core/schemas'
 import { eq, and } from 'drizzle-orm'
 import { IngestionInput, IngestionResult } from './types'
 
-import { CIPHER_CONFIG, deriveBlockIv } from '@schloss/core/src/ciphers'
+import { CIPHER_CONFIG, deriveBlockIv } from '@schloss/core/ciphers'
 
 const { plaintextBlockSizeBytes } = CIPHER_CONFIG.streaming
 

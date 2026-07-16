@@ -1,7 +1,7 @@
-import { HashRingRouter } from '@schloss/keep/src/paths'
-import type { BaseStorageProvider } from '@schloss/keep/src/interface'
+import { HashRingRouter } from '@schloss/keep'
+import type { BaseStorageProvider } from '@schloss/keep'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import { users, assets } from '@schloss/core/src/schemas'
+import { users, assets } from '@schloss/core/schemas'
 import { eq } from 'drizzle-orm'
 
 export interface EscrowOnboardInput {
@@ -20,13 +20,17 @@ export async function onboardUserEscrow(
   routerConfig: any,
   input: EscrowOnboardInput
 ): Promise<{ success: boolean; sliceKey: string }> {
-  const existingUser = await db.select()
+  const [existingUser] = await db.select()
     .from(users)
     .where(eq(users.appGuid, input.appGuid))
     .limit(1)
 
-  if (existingUser.length > 0) {
-    throw new Error('User identity already exists')
+  const isFullyOnboarded = existingUser && 
+    existingUser.publicKey && 
+    !existingUser.publicKey.startsWith('MOCK_')
+
+  if (isFullyOnboarded) {
+    throw new Error('User identity is already fully onboarded')
   }
 
   const router = new HashRingRouter({
@@ -73,17 +77,36 @@ export async function onboardUserEscrow(
   })
 
   try {
-    await db.batch([
-      db.insert(users).values({
-        firebaseGuid: input.firebaseGuid,
-        appGuid: input.appGuid,
-        publicKey: input.publicKey,
-        createdAt: Math.floor(Date.now() / 1000),
-        email: input.email || null,
-        displayName: input.displayName || null,
-        keyBackup: input.keyBackup,
-        salt: input.salt
-      }),
+    const dbOperations: any[] = []
+
+    if (existingUser) {
+      dbOperations.push(
+        db.update(users)
+          .set({
+            publicKey: input.publicKey,
+            keyBackup: input.keyBackup,
+            salt: input.salt,
+            email: input.email || existingUser.email,
+            displayName: input.displayName || existingUser.displayName
+          })
+          .where(eq(users.id, existingUser.id))
+      )
+    } else {
+      dbOperations.push(
+        db.insert(users).values({
+          firebaseGuid: input.firebaseGuid,
+          appGuid: input.appGuid,
+          publicKey: input.publicKey,
+          createdAt: Math.floor(Date.now() / 1000),
+          email: input.email || null,
+          displayName: input.displayName || null,
+          keyBackup: input.keyBackup,
+          salt: input.salt
+        })
+      )
+    }
+
+    dbOperations.push(
       db.insert(assets).values({
         namespace: 'profiles',
         key: sliceKey,
@@ -98,7 +121,9 @@ export async function onboardUserEscrow(
           syncedAt: Math.floor(Date.now() / 1000)
         }
       })
-    ])
+    )
+
+    await db.batch(dbOperations as any)
   } catch (dbError) {
     if (existingSliceData) {
       const rollbackBytes = new TextEncoder().encode(JSON.stringify(existingSliceData))

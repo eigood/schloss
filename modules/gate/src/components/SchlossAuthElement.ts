@@ -4,12 +4,15 @@ class SchlossAuthEngineElement extends HTMLElement {
   private engine: SchlossAuthEngine
   private statusText: HTMLElement | null = null
   private screens: HTMLElement[] = []
+  private currentFirebaseToken: string = ''
+  private handleTokenBound: (e: Event) => void
 
   constructor() {
     super()
     const api = this.getAttribute('data-api') || ''
     const cdn = this.getAttribute('data-cdn') || ''
     this.engine = new SchlossAuthEngine(api, cdn)
+    this.handleTokenBound = this.handleTokenEvent.bind(this)
   }
 
   connectedCallback() {
@@ -20,7 +23,91 @@ class SchlossAuthEngineElement extends HTMLElement {
     this.setupUnlock()
     this.setupLink()
     this.setupDashboard()
-    this.init()
+
+    // Listen for asynchronous token state changes from your application's Firebase handler
+    this.addEventListener('schloss-token-changed', this.handleTokenBound)
+
+    this.updateStatus('Status: Awaiting authentication credentials...')
+  }
+
+  disconnectedCallback() {
+    this.removeEventListener('schloss-token-changed', this.handleTokenBound)
+  }
+
+  private updateStatus(msg: string) {
+    if (this.statusText) {
+      this.statusText.innerText = msg
+    }
+  }
+
+  private handleTokenEvent(e: Event) {
+    const customEvent = e as CustomEvent<{ token: string | null }>
+    const newToken = customEvent.detail?.token || ''
+
+    if (!newToken) {
+      this.handleLogout()
+    } else if (newToken !== this.currentFirebaseToken) {
+      this.processNewToken(newToken)
+    }
+  }
+
+  private async processNewToken(token: string) {
+    this.currentFirebaseToken = token
+    
+    this.updateStatus('Status: Synchronizing security layers...')
+    try {
+      const state = await this.engine.boot(token)
+
+      if (state.status === 'locked') {
+        this.transitionTo('schloss-screen-locked')
+        this.updateStatus('Status: Access Blocked')
+        return
+      }
+
+      if (state.status === 'pending_approval') {
+        this.transitionTo('schloss-screen-pending')
+        this.updateStatus('Status: Awaiting Approval')
+        return
+      }
+
+      const hasLocalKey = !!localStorage.getItem('schloss_local_salt')
+      if (!hasLocalKey && state.status === 'unprovisioned') {
+        const cdnUrl = this.getAttribute('data-cdn')
+        const response = await fetch(`${cdnUrl}/profiles/${state.appGuid}.json`, { method: 'HEAD' })
+        if (response.status === 200) {
+          this.transitionTo('schloss-screen-link')
+          this.updateStatus('Status: Link Device')
+          return
+        }
+      }
+
+      if (state.status === 'unprovisioned') {
+        this.transitionTo('schloss-screen-onboard')
+        this.updateStatus('Status: First-Time Initialization')
+        return
+      }
+
+      if (state.status === 'active') {
+        this.transitionTo('schloss-screen-unlock')
+        this.updateStatus('Status: Identity Locked')
+      }
+    } catch (err: any) {
+      console.error(err)
+      this.updateStatus('Status: Handshake failed.')
+    }
+  }
+
+  private handleLogout() {
+    this.currentFirebaseToken = ''
+    this.engine.clearSession()
+    
+    // Clear passwords from inputs for security
+    this.querySelectorAll('.pass-input').forEach(input => {
+      (input as HTMLInputElement).value = ''
+    })
+
+    this.screens.forEach(screen => screen.removeAttribute('active'))
+    this.updateStatus('Status: Session terminated. Please sign in.')
   }
 
   private transitionTo(screenTagName: string) {
@@ -33,61 +120,6 @@ class SchlossAuthEngineElement extends HTMLElement {
     })
   }
 
-  private async getFirebaseToken() {
-    return localStorage.getItem('firebase_id_token') || ''
-  }
-
-  private async init() {
-    const token = await this.getFirebaseToken()
-    if (!token) {
-      this.updateStatus('Status: Waiting for Firebase Authentication...')
-      return
-    }
-
-    this.updateStatus('Status: Testing identity keys...')
-    const state = await this.engine.boot(token)
-
-    if (state.status === 'locked') {
-      this.transitionTo('schloss-screen-locked')
-      this.updateStatus('Status: Access Blocked')
-      return
-    }
-
-    if (state.status === 'pending_approval') {
-      this.transitionTo('schloss-screen-pending')
-      this.updateStatus('Status: Awaiting Approval')
-      return
-    }
-
-    const hasLocalKey = !!localStorage.getItem('schloss_local_salt')
-    if (!hasLocalKey && state.status === 'unprovisioned') {
-      const cdnUrl = this.getAttribute('data-cdn')
-      const response = await fetch(`${cdnUrl}/profiles/${state.appGuid}.json`, { method: 'HEAD' })
-      if (response.status === 200) {
-        this.transitionTo('schloss-screen-link')
-        this.updateStatus('Status: Link Device')
-        return
-      }
-    }
-
-    if (state.status === 'unprovisioned') {
-      this.transitionTo('schloss-screen-onboard')
-      this.updateStatus('Status: First-Time Initialization')
-      return
-    }
-
-    if (state.status === 'active') {
-      this.transitionTo('schloss-screen-unlock')
-      this.updateStatus('Status: Identity Locked')
-    }
-  }
-
-  private updateStatus(msg: string) {
-    if (this.statusText) {
-      this.statusText.innerText = msg
-    }
-  }
-
   private setupOnboard() {
     const onboardScreen = this.querySelector('schloss-screen-onboard')
     if (!onboardScreen) return
@@ -97,9 +129,8 @@ class SchlossAuthEngineElement extends HTMLElement {
       e.preventDefault()
       this.updateStatus('Status: Deriving keys on device...')
       const pass = (form.querySelector('.pass-input') as HTMLInputElement).value
-      const token = await this.getFirebaseToken()
       try {
-        await this.engine.onboard(token, pass)
+        await this.engine.onboard(this.currentFirebaseToken, pass)
         this.transitionTo('schloss-screen-dashboard')
         this.updateStatus('Status: Operational')
       } catch (err: any) {
@@ -136,10 +167,9 @@ class SchlossAuthEngineElement extends HTMLElement {
       const newPass = prompt('Set a brand new master passphrase to request key generation:')
       if (!newPass) return
 
-      const token = await this.getFirebaseToken()
       this.updateStatus('Status: Registering identity reset request...')
       try {
-        await this.engine.requestAdminGatedRekey(token, newPass)
+        await this.engine.requestAdminGatedRekey(this.currentFirebaseToken, newPass)
         this.transitionTo('schloss-screen-pending')
         this.updateStatus('Status: Awaiting Approval')
       } catch (err: any) {
@@ -159,9 +189,8 @@ class SchlossAuthEngineElement extends HTMLElement {
     form?.addEventListener('submit', async (e) => {
       e.preventDefault()
       const pass = (form.querySelector('.pass-input') as HTMLInputElement).value
-      const token = await this.getFirebaseToken()
       try {
-        await this.engine.linkDevice(token, pass)
+        await this.engine.linkDevice(this.currentFirebaseToken, pass)
         this.transitionTo('schloss-screen-dashboard')
         this.updateStatus('Status: Operational')
       } catch (err: any) {

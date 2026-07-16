@@ -1,4 +1,4 @@
-import { HashRingConfig } from "@schloss/core/src/schemas"
+import { HashRingConfig } from "@schloss/core/schemas"
 
 export interface HashRingRouterOptions {
   storagePrefix: string
@@ -45,8 +45,38 @@ export function murmurHash3(key: string): number {
   return h1 >>> 0
 }
 
+export function bootstrapEmptyConfig(sliceCount: number = 10, vnodeFactor: number = 128): HashRingConfig {
+  const slices: HashRingConfig["slices"] = {}
+  const pairs: Array<{ token: number; sliceIndex: number }> = []
+  for (let k = 0; k < sliceCount; k++) {
+    const sliceId = `slice_${k}`
+    slices[k] = {
+      sliceId,
+      fileName: `slice_${k}.json`,
+      assetCount: 0,
+      hashEtag: ""
+    }
+    for (let v = 0; v < vnodeFactor; v++) {
+      const token = murmurHash3(`slice_${k}_vnode_${v}`)
+      pairs.push({ token, sliceIndex: k })
+    }
+  }
+  pairs.sort((a, b) => a.token - b.token)
+  const ringTokens = pairs.map(p => p.token)
+  const ringSliceIndices = pairs.map(p => p.sliceIndex)
+  return {
+    algorithm: "murmurhash3_32",
+    vnodeFactor,
+    sliceCount,
+    ringTokens,
+    ringSliceIndices,
+    slices
+  }
+}
+
 export class HashRingRouter {
   private options: HashRingRouterOptions
+
   constructor(options: HashRingRouterOptions) {
     this.options = options
   }

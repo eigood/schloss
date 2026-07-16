@@ -1,7 +1,7 @@
-import { HashRingRouter } from '@schloss/keep/src/paths'
-import type { BaseStorageProvider } from '@schloss/keep/src/interface'
+import { HashRingRouter } from '@schloss/keep'
+import type { BaseStorageProvider } from '@schloss/keep'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import { users, groups, memberships, assets } from '@schloss/core/src/schemas'
+import { users, groups, memberships, assets } from '@schloss/core/schemas'
 import { eq, and } from 'drizzle-orm'
 
 export interface KeyDistributionInput {
