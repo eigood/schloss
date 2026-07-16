@@ -3,6 +3,10 @@ import { assets, users, groups } from '@schloss/core/src/schemas'
 import { eq, and } from 'drizzle-orm'
 import { IngestionInput, IngestionResult } from './types'
 
+import { CIPHER_CONFIG, deriveBlockIv } from '@schloss/core/src/ciphers'
+
+const { plaintextBlockSizeBytes } = CIPHER_CONFIG.streaming
+
 // Helper to construct our unencrypted binary envelope header prefix
 function buildEnvelopeHeader(
   routingType: 'individual' | 'group',
@@ -132,6 +136,70 @@ async function wrapGroupKey(
   }
 }
 
+// Helper function to build the encryption TransformStream with prepended binary header
+export function createEncryptionStream(
+  importDek: CryptoKey,
+  ivData: Uint8Array,
+  headerBytes: Uint8Array
+): TransformStream<Uint8Array, Uint8Array> {
+  let accumulator = new Uint8Array(0)
+  let blockIndex = 0
+  let headerSent = false
+
+  return new TransformStream<Uint8Array, Uint8Array>({
+    async transform(chunk, controller) {
+      // Step 1: Prepend the unencrypted binary envelope header on start
+      if (!headerSent) {
+        controller.enqueue(headerBytes)
+        headerSent = true
+      }
+
+      // Step 2: Queue incoming bytes into the block accumulator
+      const merged = new Uint8Array(accumulator.length + chunk.length)
+      merged.set(accumulator, 0)
+      merged.set(chunk, accumulator.length)
+      accumulator = merged
+
+      // Step 3: Segment stream and encrypt
+      while (accumulator.length >= plaintextBlockSizeBytes) {
+        const block = accumulator.slice(0, plaintextBlockSizeBytes)
+        accumulator = accumulator.slice(plaintextBlockSizeBytes)
+        const blockIv = deriveBlockIv(ivData, blockIndex)
+
+        const encrypted = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: blockIv, tagLength: 128 },
+          importDek,
+          block
+        )
+
+        controller.enqueue(new Uint8Array(encrypted))
+        blockIndex++
+      }
+    },
+
+    async flush(controller) {
+      // In case we process a zero-byte or tiny-byte file where transform never runs
+      if (!headerSent) {
+        controller.enqueue(headerBytes)
+        headerSent = true
+      }
+
+      // Step 4: Handle trailing block segment
+      if (accumulator.length > 0) {
+        const blockIv = deriveBlockIv(ivData, blockIndex)
+
+        const encrypted = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: blockIv, tagLength: 128 },
+          importDek,
+          accumulator
+        )
+
+        controller.enqueue(new Uint8Array(encrypted))
+      }
+    }
+  })
+}
+
 // Main Orchestrator Function
 export async function ingestAsset(
   db: any,
@@ -200,24 +268,9 @@ export async function ingestAsset(
         ['encrypt']
       )
 
-      let headerWritten = false
-      const encryptorTransform = new TransformStream<Uint8Array, Uint8Array>({
-        async transform(chunk, controller) {
-          if (!headerWritten) {
-            controller.enqueue(headerBytes)
-            headerWritten = true
-          }
-          
-          const encryptedChunk = await crypto.subtle.encrypt(
-            { name: 'AES-GCM', iv: ivData },
-            importDek,
-            chunk
-          )
-          controller.enqueue(new Uint8Array(encryptedChunk))
-        }
-      })
-
-      finalPublicStream = publicSourceStream.pipeThrough(encryptorTransform)
+      finalPublicStream = publicSourceStream.pipeThrough(
+        createEncryptionStream(importDek, ivData, headerBytes)
+      )
     }
 
     // 3. Run both I/O operations concurrently in parallel
