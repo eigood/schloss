@@ -156,3 +156,25 @@ async function decryptDataEncryptionKey(header: any, context: DecryptionContext)
   throw new Error('Unsupported asset decryption routing scheme')
 }
 
+export function decryptResponse(
+  response: Response,
+  context: DecryptionContext
+): Response {
+  if (!response.ok) {
+    throw new Error(`Cannot decrypt failed network response: ${response.status}`)
+  }
+
+  if (!response.body) {
+    throw new Error('Response body is empty or unavailable for decryption')
+  }
+
+  // Returns synchronously and instantly. Pipeline is linked but idle.
+  const decryptedStream = decryptAssetStream(response.body, context)
+
+  return new Response(decryptedStream, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers
+  })
+}
+
