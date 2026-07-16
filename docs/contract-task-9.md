@@ -1,0 +1,8 @@
+# TASK SUMMARY: Schloss Core & Kern Orchestration (Task 9)
+
+- FILE LOCATIONS: src/coordinator.ts (ConfigCoordinator state manager), src/escrow.ts (onboardUserEscrow), src/sign.ts (addUserToGroup, rotateGroupKeys)
+- DATABASE TABLE/SCHEMA: DB-agnostic drizzle statements target assets (namespace, key, hashEtag, sizeBytes, syncedAt), users (appGuid, pendingPublicKey, createdAt), and memberships (userId, groupId, role) tables imported exclusively from @schloss/core
+- SUPPORTING DATA STRUCTURES: ConfigCoordinatorOptions (db instance type 'any', storage BaseStorageProvider, routerConfig options), EscrowOnboardInput (appGuid, firebaseGuid, publicKey, keyBackup, salt, email, displayName), KeyDistributionInput (userId, appGuid, ephemeralPublicKey, encryptedMasterKey, authenticationTag, keyVersion), SliceStripePayload (sliceId, generatedAt, profiles record map)
+- SYSTEM LOGIC/SIGNATURES: ConfigCoordinator.getRouter(), ConfigCoordinator.getConfig(), ConfigCoordinator.mutateAndCommit(mutationFn, dbOps, maxRetries, attempt), ConfigCoordinator.mutateAndCommitSlice(sliceKey, mutationFn, dbOps, maxRetries, attempt), onboardUserEscrow(db, coordinator, input), rotateGroupKeys(db, coordinator, groupId, evictedUserId, newKeyVersion, newMasterKeyBlob, newDistributions)
+- CODE/DEPS POLICY: Strictly avoid local database or driver path imports (e.g. "./db"), enforce dependency separation by keeping the drizzle db type generic (any) to maintain cloudflare worker/D1 platform agnosticism, guarantee data integrity across distributed nodes by grouping mutations by slice and staging all database updates and membership evictions in a final atomic mutateAndCommit transaction block with automatic exponential backoff retry logic on 412 status code conflicts
+
