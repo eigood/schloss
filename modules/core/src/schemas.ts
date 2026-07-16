@@ -35,9 +35,16 @@ export const assets = sqliteTable('assets', {
   sizeBytes: integer('size_bytes').notNull(),
   lastModified: integer('last_modified').notNull(),
   syncedAt: integer('synced_at').notNull(),
-}, (table) => [
-  uniqueIndex('namespace_key_idx').on(table.namespace, table.key)
-]);
+
+  // Pipeline routing & generation support
+  routingType: text('routing_type').notNull(), // 'public' | 'individual' | 'group'
+  storageClass: text('storage_class').notNull().default('archived'), // 'archived' | 'generated'
+  generationSource: text('generation_source'),
+  generationParams: text('generation_params'), // JSON string of parameters
+  isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false)
+}, (t) => [
+  unique('namespace_key_idx').on(t.namespace, t.key)
+])
 
 export type User = InferSelectModel<typeof users>
 export type NewUser = InferInsertModel<typeof users>
