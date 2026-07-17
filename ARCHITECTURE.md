@@ -32,6 +32,8 @@ schloss/
 │   │   ├── package.json       # Depends strictly on @schloss/core
 │   │   └── src/
 │   │       ├── index.ts       # Kern exports entry point
+│   │       ├── registration.ts# RegistrationGateway orchestration
+│   │       ├── coordinator.ts # ConfigCoordinator & OCC logic
 │   │       ├── escrow.ts      # Escrow generation and file mechanics
 │   │       └── sign.ts        # Manifest state signature builders
 │   │
@@ -60,7 +62,9 @@ schloss/
 ├── .npmignore                 # Prevents the /plugins folder from leaking to npm
 ├── package.json               # Monorepo root manifest and wildcard export router
 └── README.md                  # Primary developer onboarding landing page
+
 ```
+
 ---
 
 ## 2. Backend Operational Zone (Secure Sandbox)
@@ -68,9 +72,17 @@ schloss/
 * Firebase Auth Blocking Function: Triggers automatically upon account creation
   to intercept the signup process, securely log the initial registration claim,
   and seed the baseline user row in the database before token issuance.
+* Registration Gateway: Decouples business logic from identity providers,
+  unifying Firebase production blockers with local mock adapters.
 * Edge Compute Runtimes: The library runs on the serverless V8 engine,
   integrating with Astro 6 (Cloudflare Adapter) or Next.js (Edge Runtime) page
   routes and serverless API endpoints via Wrangler emulation.
+* ConfigCoordinator: Manages global topology and multi-worker consistency. It
+  utilizes a 0ms reading wrapper with in-memory singleton caching and ETag-
+  based metadata validation to detect topology updates.
+* Optimistic Concurrency Control (OCC): Mutations follow a strict Read-Modify-
+  Write sequence gated by storage-provided validation identifiers; 412
+  collisions trigger automated cache refresh and retry logic.
 * Cloudflare D1 Database: The transactional source of truth for system state
   metadata. It tracks user GUIDs, group memberships, user public keys, and
   unencrypted Group Master Keys, eliminating static file-scanning overhead.
@@ -78,14 +90,10 @@ schloss/
   unencrypted foundational data sources. Because consumers only view generated
   data, public assets are disposable and can be recompiled from this source
   cache at any time, engineering out data loss.
-* Storage Vendor Plugin (@schloss/keep-r2): Located in the `plugins/` directory,
-  this S3-compatible carrier implements the abstract primitives of
-  `@schloss/keep`. It maps the library's isomorphic request/response structures
-  directly to physical production Cloudflare R2 buckets.
-* Global Singleton Memory Cache: The backend controller implements a
-  global-scope JavaScript variable to store an in-memory instance of the parsed
-  ring topology. This layout bypasses full storage read operations on active
-  worker execution threads.
+* Storage Vendor Plugin (@schloss/keep-r2): Located in the plugins/ directory,
+  this S3-compatible carrier implements the abstract primitives of @schloss/keep.
+  It maps the library's isomorphic request/response structures directly to
+  physical production Cloudflare R2 buckets.
 
 ---
 
@@ -101,7 +109,7 @@ schloss/
   user allocations onto a Consistent Hashing Ring.
 * Global Topology Document (/keys/config.json): The cryptographic structural
   directory. Contains the token positions, virtual node layouts, and group key
-  tracking matrices. It serves as the target manifest for synchronized cache
+  tracking matrices. Managed by the ConfigCoordinator for synchronized cache
   evaluations.
 * Protected Files Folder (/protected-files/): Contains the encrypted data
   payloads. Files are either named deterministically by user GUID (for unique,
@@ -112,6 +120,7 @@ schloss/
 ## 4. The Cryptographic Distribution Model & Cold-Start Workflows
 
 ### A. Core Cryptographic Distribution
+
 * Individual File Protection: The backend generates a unique, single-use
   Symmetric DEK (Data-Encrypting Key) to encrypt the asset. The DEK is
   encrypted with the consumer's Asymmetric Public Key and appended directly
@@ -126,9 +135,10 @@ schloss/
   Files rather than inside individual user profile files.
 
 ### B. Cold-Start Topology Bootstrapping
+
 * Uninitialized State Detection: If an operational execution thread triggers a
-  topology load and the storage driver returns an HTTP 404 on config.json,
-  the initialization layer automatically runs an idempotent bootstrap routing
+  topology load and the storage driver returns an HTTP 404 on config.json, the
+  initialization layer automatically runs an idempotent bootstrap routing
   module.
 * Baseline Ring Seeding: The bootstrap routine generates a default, evenly
   balanced, empty ring topology array (e.g., pre-allocating 10 default
@@ -141,6 +151,7 @@ schloss/
 ## 5. User Lifecycle Workflows
 
 ### A. Synchronized Configuration Reading
+
 1. Whenever a serverless action is triggered, the engine executes a reading
    wrapper that presents its local in-memory version identifier to the backing
    store via conditional HTTP headers (`If-None-Match`).
@@ -152,45 +163,42 @@ schloss/
    its memory singleton and match global reality.
 
 ### B. Initial Entry & Cryptographic Onboarding
-1. A new user is created in the D1 relational database via an external Firebase
-   Identity Hook. At this stage, they are authenticated but lack cryptographic
-   keys.
-2. Upon first site access, the frontend vanilla JavaScript client
-   (@schloss/gate) attempts to fetch their identity file from public R2 and
-   receives an expected HTTP 404.
+
+1. A new user is created in the D1 relational database via the
+   RegistrationGateway (using either Firebase or Mock adapters).
+2. Upon first site access, the frontend client (@schloss/gate) attempts to
+   fetch their identity file and receives an expected HTTP 404.
 3. This 404 serves as a deterministic trigger for the browser to run local
-   client-side key generation (slated for lightweight ECC/Elliptic Curve
-   Cryptography).
+   client-side key generation.
 4. The browser encrypts the generated private key using a user passphrase and
    transmits the public/encrypted-private package to an Astro/Next.js server
    endpoint.
-5. The backend component (@schloss/kern) reads the cached topology
-   configuration, calculates the user's target coordinate on the Hash Ring,
-   writes the permanent identity file to R2, and registers an empty container
-   block for them inside that specific slice file.
+5. The backend calculates the target coordinate on the Hash Ring via the
+   ConfigCoordinator, writes the identity file, and registers the user block.
 
 ### C. Group Addition
+
 1. The administrative layer logs the group linkage into the D1 relational
    database table.
 2. The backend reads the target user's public key and the group's current master
    key from D1.
 3. The backend encrypts the group key with the user's public key and appends the
    result into the user's pre-allocated block inside their designated Hash Ring
-   stripe file on R2 (1 server write).
+   stripe file on R2.
 
 ### D. User Removal & Optimistic Key Rotation
-1. The administrative layer deletes the membership record from the D1 database.
-2. The backend generates a brand-new group master key and increments the
-   group's active version integer in D1.
-3. The backend triggers a strict Read-Modify-Write sequence against config.json,
-   passing the current cache version tracking token.
-4. If an external worker has altered the file concurrently, the store rejects
-   the update. The current worker then catches the conflict exception, refreshes
-   its local memory, and safely re-runs its routing execution logic.
-5. Upon a successful write-through verification pass, the updated config is
-   committed to R2, the global cache indicator is invalidated across the mesh,
-   and the engine concurrently rewrites only the active stripe files to
-   distribute new keys while cleanly excluding the revoked user.
+
+1. The administrative layer deletes the membership record from D1.
+2. The backend generates a new group master key and increments the version
+   integer in D1.
+3. The backend triggers a strict OCC-gated Read-Modify-Write sequence against
+   config.json.
+4. If an external worker has altered the file, the store rejects the update.
+   The current worker then catches the conflict exception, refreshes its
+   memory, and re-runs its execution logic.
+5. Upon success, the updated config is committed to R2, the global cache
+   indicator is invalidated, and the engine rewrites only the active stripe
+   files to distribute new keys.
 
 ---
 
@@ -220,32 +228,37 @@ determine the target cryptographic pipeline and storage directory:
 ## 7. Mobile & Cache Optimization Plan
 
 ### A. Write-Quota Preservation (Backend Storage Layer)
-The BaseStorageProvider class abstract interface—authored inside
-**`@schloss/keep`**—defines a completely unopinionated pass-through contract
-using standard web primitives. When the vendor plugin **`@schloss/keep-r2`**
-implements this contract for production, it accepts the unchecked options
-parameter block and passes it completely unmodified down to the physical
-Cloudflare R2 bucket. This structural pass-through allows the administrative
-core (`@schloss/kern`) to natively inject precise `R2PutOptions` (such as
-strong ETags, custom content-hashes, and targeted cache-control headers)
-during file creation, safely keeping global infrastructure writes well under
-your 1 Million writes/month account limit.
+
+The BaseStorageProvider class abstract interface—authored inside @schloss/keep—
+defines a completely unopinionated pass-through contract using standard web
+primitives. When the vendor plugin @schloss/keep-r2 implements this contract
+for production, it accepts the unchecked options parameter block and passes it
+completely unmodified down to the physical Cloudflare R2 bucket. This
+structural pass-through allows the administrative core (@schloss/kern) to
+natively inject precise R2PutOptions (such as strong ETags, custom content-
+hashes, and targeted cache-control headers) during file creation, safely
+keeping global infrastructure writes well under your 1 Million writes/month
+account limit.
 
 ### B. Mesh Synchronization and Latency Shielding
+
 By routing the master configuration file through a strict read-verify-validate
-loop, the edge computing layer completely bypasses storage lookup bottlenecks:
+loop managed by the ConfigCoordinator, the edge computing layer completely
+bypasses storage lookup bottlenecks:
+
 * 0ms Local Lookups: Worker instances evaluate the active Hash Ring topology
   directly out of a global JavaScript memory singleton, completely avoiding R2
   network calls on standard user requests.
 * Mesh Consistency: The engine uses lightweight HTTP validation headers
   (`If-None-Match`) to query the static file server. If a different worker data
-  center has pushed an update to `config.json`, the local instance immediately
+  center has pushed an update to config.json, the local instance immediately
   drops its stale variable and syncs with global reality without stalling the
   client request thread.
 
 ### C. Network & CPU Efficiency (Older Mobile Devices)
-* Hardware Acceleration: The frameworkless client library (`@schloss/gate`)
-  relies strictly on the browser's native `window.crypto.subtle` layer. Because
+
+* Hardware Acceleration: The frameworkless client library (@schloss/gate)
+  relies strictly on the browser's native window.crypto.subtle layer. Because
   these cryptographic routines run via compiled browser C++ code rather than
   heavy JavaScript libraries, asymmetric key unwrapping and symmetric
   decryption execute at native hardware speeds without lagging older mobile
@@ -256,7 +269,7 @@ loop, the edge computing layer completely bypasses storage lookup bottlenecks:
   heavy encrypted binaries directly inside local disk cache, loading them
   instantly on subsequent visits without hitting your servers.
 * Sub-Millisecond Edge Validations: For mutable files that cannot use
-  content-hashing (like `config.json` or individual ring slices), the browser
+  content-hashing (like config.json or individual ring slices), the browser
   uses native HTTP validation. The vanilla JS frontend presents its cached ETag
   via standard conditional headers. If the user's groups have not been modified,
   Cloudflare instantly returns a blank `HTTP 304 Not Modified` payload,
