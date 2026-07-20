@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { users } from '@schloss/core'
 import { ConfigCoordinator } from './coordinator'
 import { SliceStripePayload } from './types'

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import { memberships } from '@schloss/core'
 import { ConfigCoordinator } from './coordinator'
 

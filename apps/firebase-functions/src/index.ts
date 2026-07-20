@@ -1,4 +1,4 @@
-i// apps/firebase-functions/src/index.ts
+// apps/firebase-functions/src/index.ts
 import { beforeUserCreated, beforeUserSignedIn, HttpsError } from 'firebase-functions/v2/identity'
 import { handleBeforeUserCreated } from '@schloss/kern'
 
